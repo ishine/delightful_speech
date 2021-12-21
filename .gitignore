@@ -118,3 +118,5 @@ TextGrid/
 hifigan/*.pth.tar
 *.out
 deepspeaker/pretrained_models/*
+preprocessed_data/*
+corpus/*

@@ -10,7 +10,7 @@ import numpy as np
 import pyworld as pw
 from scipy.stats import betabinom
 # from scipy.interpolate import interp1d
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, scale
 from tqdm import tqdm
 from pathlib import Path
 
@@ -28,6 +28,10 @@ class Preprocessor:
         self.corpus_dir = preprocess_config["path"]["corpus_path"]
         self.in_dir = preprocess_config["path"]["raw_path"]
         self.out_dir = preprocess_config["path"]["preprocessed_path"]
+        try:
+            self.wav_dir = preprocess_config["path"]["wav_dir_path"]
+        except KeyError:
+            self.wav_dir = None
         self.val_size = preprocess_config["preprocessing"]["val_size"]
         self.sampling_rate = preprocess_config["preprocessing"]["audio"]["sampling_rate"]
         self.hop_length = preprocess_config["preprocessing"]["stft"]["hop_length"]
@@ -103,11 +107,14 @@ class Preprocessor:
         def partial_fit(scaler, value):
             if len(value) > 0:
                 scaler.partial_fit(value.reshape((-1, 1)))
+                # print("fitted")
 
         def compute_stats(pitch_scaler, energy_scaler, pitch_dir="pitch", energy_dir="energy"):
             if self.pitch_normalization:
                 pitch_mean = pitch_scaler.mean_[0]
                 pitch_std = pitch_scaler.scale_[0]
+                # pitch_mean = np.mean(pitch_scaler)[0]
+                # pitch_std = np.std(pitch_scaler)[0]
             else:
                 # A numerical trick to avoid normalization...
                 pitch_mean = 0
@@ -137,16 +144,23 @@ class Preprocessor:
             save_speaker_emb = self.speaker_emb is not None and speaker not in skip_speakers
             if os.path.isdir(os.path.join(self.in_dir, speaker)):
                 speakers[speaker] = i
-                for wav_name in tqdm(os.listdir(os.path.join(self.in_dir, speaker))):
+                wav_dir_path = self.wav_dir if self.wav_dir else os.path.join(self.in_dir, speaker, "wavs")
+                for wav_name in tqdm(os.listdir(wav_dir_path)):
                     if ".wav" not in wav_name:
                         continue
 
                     basename = wav_name.split(".")[0]
+                    # print("\n", basename)
                     tg_path = os.path.join(
-                        self.out_dir, "TextGrid", speaker, "{}.TextGrid".format(basename)
+                        self.out_dir, "TextGrid", "{}.TextGrid".format(basename)
                     )
-                    if os.path.exists(tg_path):
-                        ret = self.process_utterance(tg_path, speaker, basename, save_speaker_emb)
+                    if not os.path.exists(tg_path):
+                        print(tg_path)
+                        continue
+                    else:
+                        ret = self.process_utterance(tg_path, speaker, basename, save_speaker_emb, wav_dir_path)
+                        # ret = self.process_utterance(speaker, basename, wav_dir_path)
+                        # print("RET", ret)
                         if ret is None:
                             continue
                         else:
@@ -242,9 +256,13 @@ class Preprocessor:
 
         return out
 
-    def process_utterance(self, tg_path, speaker, basename, save_speaker_emb):
-        wav_path = os.path.join(self.in_dir, speaker, "{}.wav".format(basename))
-        text_path = os.path.join(self.in_dir, speaker, "{}.lab".format(basename))
+    def process_utterance(self, tg_path, speaker, basename, save_speaker_emb, wav_dir_path=None):
+        if wav_dir_path:
+            wav_path = os.path.join(wav_dir_path, "{}.wav".format(basename))
+            text_path = os.path.join(self.in_dir, speaker, "data_modeling_word/text", "{}.txt".format(basename))
+        else:
+            wav_path = os.path.join(self.in_dir, speaker, "{}.wav".format(basename))
+            text_path = os.path.join(self.in_dir, speaker, "{}.lab".format(basename))
 
         # Get alignments
         textgrid = tgt.io.read_textgrid(tg_path)
@@ -331,6 +349,139 @@ class Preprocessor:
             mel_spectrogram.shape[1],
             spker_embed,
         )
+
+    # def process_utterance(self, speaker, basename, wav_dir_path):
+    #     # wav_path  = os.path.join(self.in_dir, speaker, "wavs", "{}.wav".format(basename))
+    #     wav_path  = os.path.join(wav_dir_path, "{}.wav".format(basename))
+    #     text_path = os.path.join(self.in_dir, speaker, "text", "{}.txt".format(basename))
+    #     tg_path = os.path.join(
+    #         self.out_dir, "TextGrid", "{}.TextGrid".format(basename)
+    #     )
+
+    #     # Get alignments
+    #     try:
+    #         textgrid = tgt.io.read_textgrid(tg_path)
+    #         phone, duration, start, end = self.get_alignment(
+    #             textgrid.get_tier_by_name("phones") # for Ky's textgrid change to Phoneme
+    #         )
+    #     except:
+    #         return None
+    #     text = "{" + " ".join(phone) + "}"
+    #     if start >= end:
+    #         return None
+
+    #     # Read and trim wav files
+    #     if not os.path.isfile(wav_path):
+    #         return
+    #     wav, _ = librosa.load(wav_path, sr=self.sampling_rate)
+
+    #     # # start and end position for trimming
+    #     # trim_min = int(self.sampling_rate * start)
+    #     # trim_max = int(self.sampling_rate * end)
+
+    #     # # remains 10ms for start and end
+    #     # remains = int((10/1000)*self.sampling_rate) # number of frames
+    #     # if trim_min - remains > 0:
+    #     #     trim_min -= remains
+    #     # trim_max += remains
+
+    #     # wav_dir  = os.path.join(self.in_dir, speaker, "trimmed_wavs")
+    #     # trimmed_wav = np.hstack([wav[trim_min : trim_max], np.zeros(6000)])
+    #     # write(f"{wav_dir}/{basename}.wav", self.sampling_rate, trimmed_wav)
+        
+    #     # trim wav array
+    #     wav = wav[
+    #         int(self.sampling_rate * start) : int(self.sampling_rate * end)
+    #     ].astype(np.float32)
+        
+    #     # Read raw text
+    #     try:
+    #         with open(text_path, "r") as f:
+    #             raw_text = f.readline().strip("\n")
+    #     except FileNotFoundError:
+    #         raw_text = ""
+
+    #     # Compute fundamental frequency
+    #     pitch, t = pw.dio(
+    #         wav.astype(np.float64),
+    #         self.sampling_rate,
+    #         frame_period=self.hop_length / self.sampling_rate * 1000,
+    #     )
+    #     pitch = pw.stonemask(wav.astype(np.float64), pitch, t, self.sampling_rate)
+
+    #     pitch = pitch[: sum(duration)]
+    #     if np.sum(pitch != 0) <= 1:
+    #         return None
+
+    #     # Compute mel-scale spectrogram and energy
+    #     mel_spectrogram, energy = Audio.tools.get_mel_from_wav(wav, self.STFT)
+    #     mel_spectrogram = mel_spectrogram[:, : sum(duration)]
+    #     energy = energy[: sum(duration)]
+
+    #     if self.pitch_phoneme_averaging:
+    #         # perform linear interpolation
+    #         nonzero_ids = np.where(pitch != 0)[0]
+    #         interp_fn = interp1d(
+    #             nonzero_ids,
+    #             pitch[nonzero_ids],
+    #             fill_value=(pitch[nonzero_ids[0]], pitch[nonzero_ids[-1]]),
+    #             bounds_error=False,
+    #         )
+    #         pitch = interp_fn(np.arange(0, len(pitch)))
+
+    #         # Phoneme-level average
+    #         pos = 0
+    #         for i, d in enumerate(duration):
+    #             if d > 0:
+    #                 pitch[i] = np.mean(pitch[pos : pos + d])
+    #             else:
+    #                 pitch[i] = 0
+    #             pos += d
+    #         pitch = pitch[: len(duration)]
+
+    #     if self.energy_phoneme_averaging:
+    #         # Phoneme-level average
+    #         pos = 0
+    #         for i, d in enumerate(duration):
+    #             if d > 0:
+    #                 energy[i] = np.mean(energy[pos : pos + d])
+    #             else:
+    #                 energy[i] = 0
+    #             pos += d
+    #         energy = energy[: len(duration)]
+    #     import copy
+    #     duration_copy = copy.deepcopy(duration)
+    #     avg_mel_ph = _average_mel_by_duration(mel_spectrogram, duration)  # [num_mel, L]
+    #     assert duration==duration_copy
+    #     # Save files
+    #     dur_filename = "{}-duration-{}.npy".format(speaker, basename)
+    #     np.save(os.path.join(self.out_dir, "duration", dur_filename), duration)
+
+    #     pitch_filename = "{}-pitch-{}.npy".format(speaker, basename)
+    #     np.save(os.path.join(self.out_dir, "pitch", pitch_filename), pitch)
+
+    #     energy_filename = "{}-energy-{}.npy".format(speaker, basename)
+    #     np.save(os.path.join(self.out_dir, "energy", energy_filename), energy)
+
+    #     mel_filename = "{}-mel-{}.npy".format(speaker, basename)
+    #     np.save(
+    #         os.path.join(self.out_dir, "mel", mel_filename),
+    #         mel_spectrogram.T,
+    #     )
+
+    #     avg_mel_filename = "{}-avg-mel-{}.npy".format(speaker, basename)
+    #     np.save(
+    #         os.path.join(self.out_dir, "avg_mel", avg_mel_filename),
+    #         avg_mel_ph,
+    #     )
+
+    #     return (
+    #         "|".join([basename, speaker, text, raw_text]),
+    #         self.remove_outlier(pitch),
+    #         self.remove_outlier(energy),
+    #         mel_spectrogram.shape[1],
+    #     )
+
 
     def beta_binomial_prior_distribution(self, phoneme_count, mel_count, scaling_factor=1.0):
         P, M = phoneme_count, mel_count

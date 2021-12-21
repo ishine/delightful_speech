@@ -328,6 +328,7 @@ def synth_samples(targets, predictions, vocoder, model_config, preprocess_config
 
 
 def plot_mel(data, stats, titles, n_attn=0, save_dir=None):
+    # print([type(dt) for dt in data])
     fig, axes = plt.subplots(len(data), 1, squeeze=False)
     if titles is None:
         titles = [None for i in range(len(data))]
@@ -370,8 +371,9 @@ def plot_mel_(fig, axes, data, stats, titles, tight_layout=True):
         ax = fig.add_axes(old_ax.get_position(), anchor="W")
         ax.set_facecolor("None")
         return ax
-
     for i in range(len(data)):
+        if not data[i]:
+            continue
         mel, pitch, energy = data[i]
         pitch = pitch * pitch_std + pitch_mean
         axes[i][0].imshow(mel, origin="lower")

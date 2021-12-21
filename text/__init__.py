@@ -1,4 +1,6 @@
 """ from https://github.com/keithito/tacotron """
+import sys
+sys.path.append('.')
 import re
 from text import cleaners
 from text.symbols import symbols
@@ -68,8 +70,16 @@ def _symbols_to_sequence(symbols):
 
 
 def _arpabet_to_sequence(text):
-    return _symbols_to_sequence(["@" + s for s in text.split()])
+    return _symbols_to_sequence([s for s in text.split()])
 
 
 def _should_keep_symbol(s):
-    return s in _symbol_to_id and s != "_" and s != "~"
+    return s in _symbol_to_id and s is not '_' and s is not '~'
+
+
+if __name__ == "__main__":
+    text = "{z O1 - d O5 - d a4 - l o7 - r a1 - r 9X6 t6 - J ie2 w2 - x O1 - b aX5 w5 - 93 - d aX5 j5 - S o1 Nm1 -}"
+    cleaner_names = []
+    print(text_to_sequence(text, cleaner_names))
+    print(len(text.split()))
+    print(len(text_to_sequence(text, cleaner_names)))

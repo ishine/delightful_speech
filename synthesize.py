@@ -83,6 +83,92 @@ def preprocess_mandarin(text, preprocess_config):
 
     return np.array(sequence)
 
+def preprocess_vietnamese(text, preprocess_config):
+    # phoneme_map = {
+    #     "a": "a",# a
+    #     "E": "E",# e
+    #     "e": "e",# ê
+    #     "i": "i",# i/y 
+    #     "O": "O",# o
+    #     "o": "o",# ô
+    #     "7": "9",# ơ
+    #     "u": "u",# u
+    #     "M": "M",# ư
+    #     "a_X": "aX",# ă
+    #     "7_X": "9X",# â
+    #     "E_X": "EX",# a (rách)
+    #     "O_X": "OX",# o (hỏng)
+    #     "ie": "ie",# iê (hiếm)
+    #     "uo": "uo",# uô (chuối)
+    #     "M7": "M9",# ươ (mươi)
+    #     "b": "b",# b
+    #     "d": "d",# đ
+    #     "s": "s",# x (xu)
+    #     "S": "S",# s (su)
+    #     "G": "G",# g (gan)
+    #     "x": "x",# kh (khánh)
+    #     "l": "l",# l
+    #     "v": "v",# v
+    #     "t_h": "th",# th
+    #     "z": "z",# d
+    #     "f": "f",# ph (phai)
+    #     "ts\\": "ts",# ch
+    #     "tS": "tS",# tr
+    #     "h": "h",# h
+    #     "k": "k",# ch (rách) / q (qua) / c (cú, liếc)
+    #     "t": "t",# t
+    #     "p": "p",# p
+    #     "n": "n",# n
+    #     "kp": "kp",# c (lóc)
+    #     "m": "m",# m
+    #     "N_+": "Np",# nh after i,ê,a (not )
+    #     "J": "J",# nh (hình)
+    #     "j": "j",# i (mươi) / y (cay)
+    #     "N": "N",# ng (hạng)
+    #     "Nm": "Nm",# ng (lủng, hỏng)
+    #     "wp": "wp",# o (thoa)  / u (qua, tuyên)
+    #     "dZ": "dZ",# gi (giao)
+    #     "w": "w",# o (giao)
+    #     "r": "r",# r
+    #     "SIL": "SIL",
+    #     "SILS": "SILS"
+    # }
+    # tone = ['1', '2', '3', '4', '5a', '5b', '6a', '6b']
+    # text = text.rstrip(punctuation)
+    # lexicon = read_lexicon(preprocess_config["path"]["lexicon_path"])
+
+    # phones = []
+    # words = re.split(r"([,;.\-\?\!\s+])", text)
+    # print(words)
+    # for w in words:
+    #     if w.lower() in lexicon:
+    #         phones += lexicon[w.lower()]
+    # converted_phonemes = []
+    # for phone in phones:
+    #     for t in tone:
+    #         if t in phone:
+    #             try:
+    #                 converted_phonemes.append(phoneme_map[phone.replace(t, "")] + t)
+    #             except KeyError:
+    #                 converted_phonemes.append(phone)
+    #             break
+    #     else:
+    #         converted_phonemes.append(phoneme_map[phone])
+
+    # converted_phonemes = "{" + "}{".join(converted_phonemes) + "}"
+    # converted_phonemes = re.sub(r"\{[^\w\s]?\}", "{SIL}", converted_phonemes)
+    # converted_phonemes = converted_phonemes.replace("}{", " ")
+
+    # print("Raw Text Sequence: {}".format(text.encode('UTF-8','ignore').decode('UTF-8')))
+    # print("Phoneme Sequence: {}".format(phones))
+    # print("Converted Phoneme Sequence: {}".format(converted_phonemes))
+    sequence = np.array(
+        text_to_sequence(
+            text, preprocess_config["preprocessing"]["text"]["text_cleaners"]
+        )
+    )
+
+    return np.array(sequence)
 
 def synthesize(device, model, args, configs, vocoder, batchs, control_values):
     preprocess_config, model_config, train_config = configs
@@ -220,6 +306,8 @@ if __name__ == "__main__":
             texts = np.array([preprocess_english(args.text, preprocess_config)])
         elif preprocess_config["preprocessing"]["text"]["language"] == "zh":
             texts = np.array([preprocess_mandarin(args.text, preprocess_config)])
+        elif preprocess_config["preprocessing"]["text"]["language"] == "vi":
+            texts = np.array([preprocess_vietnamese(args.text, preprocess_config)])
         text_lens = np.array([len(texts[0])])
         batchs = [(ids, raw_texts, speakers, texts, text_lens, max(text_lens), spker_embed)]
 

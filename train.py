@@ -38,6 +38,10 @@ def train(rank, args, configs, batch_size, num_gpus):
     dataset = Dataset(
         "train.txt", preprocess_config, model_config, train_config, sort=True, drop_last=True
     )
+    for dt in dataset:
+        if len(dt['text'])!=len(dt['pitch']):
+            print(len(dt['text']),len(dt['pitch']),len(dt['duration']))
+            print(dt['id'])
     data_sampler = DistributedSampler(dataset) if num_gpus > 1 else None
     group_size = 4  # Set this larger than 1 to enable sorting in Dataset
     assert batch_size * group_size < len(dataset)
