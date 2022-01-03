@@ -120,3 +120,6 @@ hifigan/*.pth.tar
 deepspeaker/pretrained_models/*
 preprocessed_data/*
 corpus/*
+delightful/*
+hifigan_2/*
+hifigan/*

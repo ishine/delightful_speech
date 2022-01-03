@@ -512,14 +512,14 @@ class Preprocessor:
                 else:
                     start_time = s
 
-            if p not in sil_phones:
+            # if p not in sil_phones:
                 # For ordinary phones
-                phones.append(p)
-                end_time = e
-                end_idx = len(phones)
-            else:
+            phones.append(p)
+            end_time = e
+            end_idx = len(phones)
+            # else:
                 # For silent phones
-                phones.append(p)
+                # phones.append(p)
 
             durations.append(
                 int(

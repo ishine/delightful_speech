@@ -170,7 +170,7 @@ def preprocess_vietnamese(text, preprocess_config):
 
     return np.array(sequence)
 
-def synthesize(device, model, args, configs, vocoder, batchs, control_values):
+def synthesize(device, model, args, configs, vocoder, denoiser, batchs, control_values):
     preprocess_config, model_config, train_config = configs
     pitch_control, energy_control, duration_control = control_values
 
@@ -189,6 +189,7 @@ def synthesize(device, model, args, configs, vocoder, batchs, control_values):
                 batch,
                 output,
                 vocoder,
+                denoiser, 
                 model_config,
                 preprocess_config,
                 train_config["path"]["result_path"],
@@ -222,7 +223,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--speaker_id",
         type=str,
-        default="p225",
+        default="NgocHuyen",
         help="speaker ID for multi-speaker synthesis, for single-sentence mode only",
     )
     parser.add_argument(
@@ -249,6 +250,11 @@ if __name__ == "__main__":
         default=1.0,
         help="control the speed of the whole utterance, larger value for slower speaking rate",
     )
+    parser.add_argument(
+        "--multiple_vocoder",
+        action="store_true",
+        help="use multiple vocoder"
+    )
     args = parser.parse_args()
 
     # Check source texts
@@ -265,18 +271,20 @@ if __name__ == "__main__":
 
     # Set Device
     torch.manual_seed(train_config["seed"])
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed(train_config["seed"])
-        device = torch.device('cuda')
-    else:
-        device = torch.device('cpu')
+    # if torch.cuda.is_available():
+    #     torch.cuda.manual_seed(train_config["seed"])
+    #     device = torch.device('cuda')
+    # else:
+    device = torch.device('cpu')
     print("Device of CompTransTTS:", device)
 
     # Get model
     model = get_model(args, configs, device, train=False)
 
     # Load vocoder
-    vocoder = get_vocoder(model_config, device)
+    if args.multiple_vocoder is True: 
+        model_config["vocoder"]["speaker"] = args.speaker_id
+    vocoder, denoiser = get_vocoder(model_config, device)
 
     # Preprocess texts
     if args.mode == "batch":
@@ -313,4 +321,4 @@ if __name__ == "__main__":
 
     control_values = args.pitch_control, args.energy_control, args.duration_control
 
-    synthesize(device, model, args, configs, vocoder, batchs, control_values)
+    synthesize(device, model, args, configs, vocoder, denoiser, batchs, control_values)

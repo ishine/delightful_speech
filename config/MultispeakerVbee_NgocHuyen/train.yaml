@@ -4,26 +4,28 @@ dist_config:
   dist_url: "tcp://localhost:54321"
   world_size: 1
 path:
-  ckpt_path: "./output/NgocHuyen_delightfulTTS/ckpt/"
-  log_path: "./output/NgocHuyen_delightfulTTS/log/"
-  result_path: "./output/NgocHuyen_delightfulTTS/result"
+  ckpt_path: "./output/MultispeakerVbee_NgocHuyen/ckpt"
+  log_path: "./output/MultispeakerVbee_NgocHuyen/log"
+  result_path: "./output/MultispeakerVbee_NgocHuyen/result_NgocHuyen"
 finetune_single_voice:
-  finetune_single_voice: False
+  finetune_single_voice: True
+  speaker_finetune: "NgocHuyen"
+  pretrained_ckpt_path: "./output/MultispeakerVbee/ckpt/792000.pth.tar"
 optimizer:
-  batch_size: 4
+  batch_size: 2
   betas: [0.9, 0.98]
   eps: 0.000000001
   weight_decay: 0.0
   grad_clip_thresh: 1.0
-  grad_acc_step: 4
+  grad_acc_step: 8
   warm_up_step: 4000
   anneal_steps: [300000, 400000, 500000]
   anneal_rate: 0.3
 step:
   total_step: 900000
   log_step: 100
-  synth_step: 1000
-  val_step: 1000
+  synth_step: 6000
+  val_step: 6000
   save_step: 25000
 duration:
   binarization_start_steps: 6000
@@ -31,3 +33,4 @@ duration:
   binarization_loss_warmup_steps: 10000
 prosody:
   gmm_mdn_beta: 0.02
+  prosody_loss_enable_steps: 50000

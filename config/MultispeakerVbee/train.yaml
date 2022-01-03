@@ -4,9 +4,9 @@ dist_config:
   dist_url: "tcp://localhost:54321"
   world_size: 1
 path:
-  ckpt_path: "./output/NgocHuyen_delightfulTTS/ckpt/"
-  log_path: "./output/NgocHuyen_delightfulTTS/log/"
-  result_path: "./output/NgocHuyen_delightfulTTS/result"
+  ckpt_path: "./output/MultispeakerVbee/ckpt"
+  log_path: "./output/MultispeakerVbee/log"
+  result_path: "./output/MultispeakerVbee/result"
 finetune_single_voice:
   finetune_single_voice: False
 optimizer:
@@ -22,12 +22,13 @@ optimizer:
 step:
   total_step: 900000
   log_step: 100
-  synth_step: 1000
-  val_step: 1000
-  save_step: 25000
+  synth_step: 6000
+  val_step: 6000
+  save_step: 6000
 duration:
   binarization_start_steps: 6000
   binarization_loss_enable_steps: 18000
   binarization_loss_warmup_steps: 10000
 prosody:
   gmm_mdn_beta: 0.02
+  prosody_loss_enable_steps: 50000

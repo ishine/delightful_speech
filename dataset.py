@@ -20,6 +20,12 @@ class Dataset(Dataset):
         self.learn_alignment = model_config["duration_modeling"]["learn_alignment"]
         self.load_spker_embed = model_config["multi_speaker"] \
             and preprocess_config["preprocessing"]["speaker_embedder"] != 'none'
+        if train_config["finetune_single_voice"]["finetune_single_voice"] is True:
+            self.speaker_finetune = train_config["finetune_single_voice"]["speaker_finetune"]
+            self.pretrained_ckpt_path = train_config["finetune_single_voice"]["pretrained_ckpt_path"]
+        else:
+            self.speaker_finetune = None
+            self.pretrained_ckpt_path = None
 
         self.pitch_level_tag, self.energy_level_tag, *_ = get_variance_level(preprocess_config, model_config)
 
@@ -31,6 +37,9 @@ class Dataset(Dataset):
         self.sort = sort
         self.drop_last = drop_last
 
+        self.remove_invalid_sample()
+        
+        
     def __len__(self):
         return len(self.text)
 
@@ -94,7 +103,20 @@ class Dataset(Dataset):
         }
 
         return sample
-
+    def delete_item(self,idx):
+        del self.basename[idx], self.speaker[idx], self.text[idx], self.raw_text[idx]
+        
+    def remove_invalid_sample(self):
+        print('start remove invalid example,len data =',len(self))
+        error_sample = 0
+        for idx,dt in enumerate(self):
+            if len(dt['text'])!=len(dt['pitch']):
+                print(len(dt['text']),len(dt['pitch']),len(dt['duration']))
+                print(dt['id'],dt['speaker'])
+                self.delete_item(idx)
+                error_sample+=1
+        # assert error_sample==0
+        print('remove invalid example Done,len data =',len(self))
     def process_meta(self, filename):
         with open(
             os.path.join(self.preprocessed_path, filename), "r", encoding="utf-8"
@@ -105,10 +127,11 @@ class Dataset(Dataset):
             raw_text = []
             for line in f.readlines():
                 n, s, t, r = line.strip("\n").split("|")
-                name.append(n)
-                speaker.append(s)
-                text.append(t)
-                raw_text.append(r)
+                if self.speaker_finetune is None or self.speaker_finetune == s:
+                    name.append(n)
+                    speaker.append(s)
+                    text.append(t)
+                    raw_text.append(r)
             return name, speaker, text, raw_text
 
     def reprocess(self, data, idxs):

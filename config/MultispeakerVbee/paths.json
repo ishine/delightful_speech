@@ -1,0 +1,59 @@
+{
+    "Speakers": [
+        {
+            "speaker_name" : "DuyPhuong",
+            "text_folder" : "",
+            "wav_22k_folder": ""
+        },
+        {
+            "speaker_name" : "HuongGiang",
+            "text_folder" : "",
+            "wav_22k_folder": ""
+        },
+        {
+            "speaker_name" : "Jackie",
+            "text_folder" : "",
+            "wav_22k_folder": ""
+        },
+        {
+            "speaker_name" : "LanTrinh",
+            "text_folder" : "",
+            "wav_22k_folder": ""
+        },
+        {
+            "speaker_name" : "MaiPhuong",
+            "text_folder" : "",
+            "wav_22k_folder": ""
+        },
+        {
+            "speaker_name" : "ManhDung",
+            "text_folder" : "",
+            "wav_22k_folder": ""
+        },
+        {
+            "speaker_name" : "MinhHoang",
+            "text_folder" : "",
+            "wav_22k_folder": ""
+        },
+        {
+            "speaker_name" : "NgocHuyen",
+            "text_folder" : "",
+            "wav_22k_folder": ""
+        },
+        {
+            "speaker_name" : "ThaoTrinh",
+            "text_folder" : "",
+            "wav_22k_folder": ""
+        },
+        {
+            "speaker_name" : "ThuyLinh",
+            "text_folder" : "",
+            "wav_22k_folder": ""
+        },
+        {
+            "speaker_name" : "TrungKien",
+            "text_folder" : "",
+            "wav_22k_folder": ""
+        }
+    ]
+}

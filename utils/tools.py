@@ -12,6 +12,7 @@ from scipy.io import wavfile
 from scipy.interpolate import interp1d
 from matplotlib import pyplot as plt
 from sklearn.manifold import TSNE
+from hifigan_2.inference_e2e import HifiGanInferenceE2E
 
 
 def get_configs_of(dataset):
@@ -268,7 +269,7 @@ def synth_one_sample(targets, predictions, vocoder, model_config, preprocess_con
     return fig, fig_attn, wav_reconstruction, wav_prediction, basename
 
 
-def synth_samples(targets, predictions, vocoder, model_config, preprocess_config, path, args):
+def synth_samples(targets, predictions, vocoder, denoiser, model_config, preprocess_config, path, args):
 
     multi_speaker = model_config["multi_speaker"]
     learn_alignment = model_config["duration_modeling"]["learn_alignment"]
@@ -315,16 +316,28 @@ def synth_samples(targets, predictions, vocoder, model_config, preprocess_config
 
     mel_predictions = predictions[1].transpose(1, 2)
     lengths = predictions[9] * preprocess_config["preprocessing"]["stft"]["hop_length"]
-    wav_predictions = vocoder_infer(
-        mel_predictions, vocoder, model_config, preprocess_config, lengths=lengths
-    )
+    if denoiser is not None and type(vocoder) is HifiGanInferenceE2E:
+        wav_predictions = []
+        for mel in mel_predictions:
+            mel = mel.unsqueeze(0)
+            print("Mel shape", mel.shape)
+            wav, _ = vocoder.inference(mel)
+            wav_denoised = denoiser(wav.reshape([1, len(wav)]), strength=0.01)[:, 0].squeeze().cpu().numpy()
+            print("Wav shape", wav.reshape([1, len(wav)]).shape)
+            print("Wav denoised shape", wav_denoised.shape)
+            wav_predictions.append(wav_denoised)
+    else:
+        wav_predictions = vocoder_infer(
+            mel_predictions, vocoder, model_config, preprocess_config, lengths=lengths
+        )        
+    denoise = "denoised" if denoiser is not None else ""
 
     sampling_rate = preprocess_config["preprocessing"]["audio"]["sampling_rate"]
     for wav, basename in zip(wav_predictions, basenames):
         wavfile.write(os.path.join(
-            path, str(args.restore_step), "{}_{}.wav".format(basename, args.speaker_id)\
-                if multi_speaker and args.mode == "single" else "{}.wav".format(basename)),
-            sampling_rate, wav)
+            path, str(args.restore_step), "{}_{}_{}.wav".format(basename, args.speaker_id, denoise)\
+                if multi_speaker and args.mode == "single" else "{}_{}.wav".format(basename, denoise)),
+            sampling_rate, wav.astype('int16')) # fix here :))
 
 
 def plot_mel(data, stats, titles, n_attn=0, save_dir=None):

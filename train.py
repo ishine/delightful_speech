@@ -2,23 +2,21 @@ import argparse
 import os
 
 import torch
-import yaml
-import torch.nn as nn
 import torch.multiprocessing as mp
-from torch.utils.tensorboard import SummaryWriter
-from torch.utils.data import DistributedSampler, DataLoader
+import torch.nn as nn
+import yaml
+from torch.cuda import amp
 from torch.distributed import init_process_group
 from torch.nn.parallel import DistributedDataParallel
-from torch.cuda import amp
-
+from torch.utils.data import DataLoader, DistributedSampler
+from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
-from utils.model import get_model, get_vocoder, get_param_num
-from utils.tools import get_configs_of, to_device, log, synth_one_sample
-from model import CompTransTTSLoss
 from dataset import Dataset
-
 from evaluate import evaluate
+from model import CompTransTTSLoss
+from utils.model import get_model, get_param_num, get_vocoder
+from utils.tools import get_configs_of, log, synth_one_sample, to_device
 
 torch.backends.cudnn.benchmark = True
 
@@ -33,15 +31,17 @@ def train(rank, args, configs, batch_size, num_gpus):
             rank=rank,
         )
     device = torch.device('cuda:{:d}'.format(rank))
-
     # Get dataset
     dataset = Dataset(
         "train.txt", preprocess_config, model_config, train_config, sort=True, drop_last=True
     )
+    error_sample = 0
     for dt in dataset:
         if len(dt['text'])!=len(dt['pitch']):
             print(len(dt['text']),len(dt['pitch']),len(dt['duration']))
-            print(dt['id'])
+            print(dt['id'],dt['speaker'])
+            error_sample+=1
+    assert error_sample==0
     data_sampler = DistributedSampler(dataset) if num_gpus > 1 else None
     group_size = 4  # Set this larger than 1 to enable sorting in Dataset
     assert batch_size * group_size < len(dataset)
@@ -64,7 +64,12 @@ def train(rank, args, configs, batch_size, num_gpus):
     vocoder = get_vocoder(model_config, device)
 
     # Training
-    step = args.restore_step + 1
+    if train_config["finetune_single_voice"]["finetune_single_voice"] is True:
+        step = train_config["finetune_single_voice"]["pretrained_ckpt_path"]
+        step = step.split("/")[-1].replace(".pth.tar", "")
+        step = int(step) + 1
+    else:
+        step = args.restore_step + 1
     epoch = 1
     grad_acc_step = train_config["optimizer"]["grad_acc_step"]
     grad_clip_thresh = train_config["optimizer"]["grad_clip_thresh"]
@@ -87,7 +92,7 @@ def train(rank, args, configs, batch_size, num_gpus):
         val_logger = SummaryWriter(val_log_path)
 
         outer_bar = tqdm(total=total_step, desc="Training", position=0)
-        outer_bar.n = args.restore_step
+        outer_bar.n = step - 1 
         outer_bar.update()
 
     train = True

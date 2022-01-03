@@ -52,6 +52,8 @@ def sequence_to_text(sequence):
             # Enclose ARPAbet back in curly braces:
             if len(s) > 1 and s[0] == "@":
                 s = "{%s}" % s[1:]
+            else:
+                s = "{"+s+"}"
             result += s
     return result.replace("}{", " ")
 
@@ -79,7 +81,10 @@ def _should_keep_symbol(s):
 
 if __name__ == "__main__":
     text = "{z O1 - d O5 - d a4 - l o7 - r a1 - r 9X6 t6 - J ie2 w2 - x O1 - b aX5 w5 - 93 - d aX5 j5 - S o1 Nm1 -}"
-    cleaner_names = []
-    print(text_to_sequence(text, cleaner_names))
+    cleaner_names = ["basic_cleaners"]
+    sequence = text_to_sequence(text, cleaner_names)
+    print(sequence)
+    print(text)
+    print(sequence_to_text(sequence))
     print(len(text.split()))
-    print(len(text_to_sequence(text, cleaner_names)))
+    print(len(sequence))

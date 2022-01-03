@@ -21,6 +21,7 @@ class CompTransTTSLoss(nn.Module):
         self.learn_alignment = model_config["duration_modeling"]["learn_alignment"]
         self.binarization_loss_enable_steps = train_config["duration"]["binarization_loss_enable_steps"]
         self.binarization_loss_warmup_steps = train_config["duration"]["binarization_loss_warmup_steps"]
+        self.prosody_loss_enable_steps = train_config["prosody"]["prosody_loss_enable_steps"]
         self.gmm_mdn_beta = train_config["prosody"]["gmm_mdn_beta"]
         self.sum_loss = ForwardSumLoss()
         self.bin_loss = BinLoss()
@@ -166,7 +167,7 @@ class CompTransTTSLoss(nn.Module):
             if self.training and self.learn_mixture:
                 w, sigma, mu, prosody_embeddings = prosody_info
                 prosody_loss = self.gmm_mdn_beta * self.mdn_loss(w, sigma, mu, prosody_embeddings.detach(), ~src_masks)
-            elif self.training and self.learn_implicit:
+            elif self.training and self.learn_implicit and step > self.prosody_loss_enable_steps:
                 up_tgt, pp_tgt, up_vec, pp_vec, _ = prosody_info
                 prosody_loss = self.mae_loss(up_tgt, up_vec)
                 # prosody_loss = self.mae_loss(
