@@ -13,6 +13,7 @@ from scipy.interpolate import interp1d
 from matplotlib import pyplot as plt
 from sklearn.manifold import TSNE
 from hifigan_2.inference_e2e import HifiGanInferenceE2E
+from text import text_to_sequence, symbols, _symbol_to_id
 
 
 def get_configs_of(dataset):
@@ -275,12 +276,14 @@ def synth_samples(targets, predictions, vocoder, denoiser, model_config, preproc
     learn_alignment = model_config["duration_modeling"]["learn_alignment"]
     pitch_level_tag, energy_level_tag, *_ = get_variance_level(preprocess_config, model_config)
     basenames = targets[0]
+    durations = []
     for i in range(len(predictions[0])):
         basename = basenames[i]
         src_len = predictions[8][i].item()
         mel_len = predictions[9][i].item()
         mel_prediction = predictions[1][i, :mel_len].detach().transpose(0, 1)
         duration = predictions[5][i, :src_len].int().detach().cpu().numpy()
+        durations.append(predictions[5][i, :src_len].squeeze().cpu().numpy().round().astype('int32'))
         attn_soft = attn_hard = None
 
         if preprocess_config["preprocessing"]["pitch"]["feature"] == "phoneme_level":
@@ -331,13 +334,33 @@ def synth_samples(targets, predictions, vocoder, denoiser, model_config, preproc
             mel_predictions, vocoder, model_config, preprocess_config, lengths=lengths
         )        
     denoise = "denoised" if denoiser is not None else ""
-
+    post_process = "post_process" if args.post_process else ""
+    
     sampling_rate = preprocess_config["preprocessing"]["audio"]["sampling_rate"]
-    for wav, basename in zip(wav_predictions, basenames):
-        wavfile.write(os.path.join(
-            path, str(args.restore_step), "{}_{}_{}.wav".format(basename, args.speaker_id, denoise)\
-                if multi_speaker and args.mode == "single" else "{}_{}.wav".format(basename, denoise)),
-            sampling_rate, wav.astype('int16')) # fix here :))
+    for wav, basename, phoneme_seqs, duration in zip(wav_predictions, basenames, targets[3], durations):
+        if args.post_process:
+            phoneme_seqs = phoneme_seqs.squeeze()
+            print(duration.shape)
+            
+            new_wav = np.array([])
+            start = 0
+            hop_length = preprocess_config["preprocessing"]["stft"]["hop_length"]
+            for idx, symb_id in enumerate(phoneme_seqs[0:]):
+                d_frames = duration[0+idx]*hop_length
+                if symb_id == _symbol_to_id["sp"]:
+                    new_wav = np.hstack((new_wav, np.zeros(15*hop_length).astype('int32')))
+                else:
+                    new_wav = np.hstack((new_wav, wav[start:start+d_frames]))
+                start += d_frames
+                wavfile.write(os.path.join(
+                    path, str(args.restore_step), "{}_{}_{}_{}.wav".format(basename, args.speaker_id, denoise, post_process)\
+                        if multi_speaker and args.mode == "single" else "{}_{}_{}.wav".format(basename, denoise, post_process)),
+                    sampling_rate, new_wav.astype('int16')) # fix here :))
+        else:
+            wavfile.write(os.path.join(
+                path, str(args.restore_step), "{}_{}_{}_{}.wav".format(basename, args.speaker_id, denoise, post_process)\
+                    if multi_speaker and args.mode == "single" else "{}_{}_{}.wav".format(basename, denoise, post_process)),
+                sampling_rate, wav.astype('int16')) # fix here :))
 
 
 def plot_mel(data, stats, titles, n_attn=0, save_dir=None):

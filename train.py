@@ -61,7 +61,7 @@ def train(rank, args, configs, batch_size, num_gpus):
     Loss = CompTransTTSLoss(preprocess_config, model_config, train_config).to(device)
 
     # Load vocoder
-    vocoder = get_vocoder(model_config, device)
+    vocoder, denoiser = get_vocoder(model_config, device)
 
     # Training
     if train_config["finetune_single_voice"]["finetune_single_voice"] is True:

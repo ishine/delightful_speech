@@ -16,6 +16,7 @@ prosody:
   
   # Liu et al., 2021
   learn_implicit: True # This is only tested under supervised duration modeling (learn_alignment: False)
+  GST: False # use explicit global style token
   bottleneck_size_u: 256
   bottleneck_size_p: 4
   ref_enc_filters: [32, 32, 64, 64, 128, 128]

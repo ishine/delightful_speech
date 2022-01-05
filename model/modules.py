@@ -722,6 +722,7 @@ class VarianceAdaptor(nn.Module):
         self.length_regulator = LengthRegulator()
         self.pitch_predictor = VariancePredictor(model_config, d_model)
         self.energy_predictor = VariancePredictor(model_config, d_model)
+        self.GST = model_config["prosody"]["GST"]
 
         self.learn_alignment = model_config["duration_modeling"]["learn_alignment"]
         self.binarization_start_steps = train_config["duration"]["binarization_start_steps"]
@@ -946,9 +947,12 @@ class VarianceAdaptor(nn.Module):
 
                 # x = x + self.utterance_prosody_prj(utterance_prosody_embeddings)
                 # x = x + self.phoneme_prosody_prj(phoneme_prosody_embeddings)
-                utterance_prosody_vectors = self.utterance_prosody_predictor(x)
-                x = x + (self.utterance_prosody_prj(utterance_prosody_embeddings) if self.training else
-                        self.utterance_prosody_prj(utterance_prosody_vectors))
+                if self.GST:
+                    x = x + self.utterance_prosody_prj(utterance)
+                else:
+                    utterance_prosody_vectors = self.utterance_prosody_predictor(x)
+                    x = x + (self.utterance_prosody_prj(utterance_prosody_embeddings) if self.training else
+                            self.utterance_prosody_prj(utterance_prosody_vectors))
                 phoneme_prosody_vectors = self.phoneme_prosody_predictor(x)
                 x = x + (self.phoneme_prosody_prj(phoneme_prosody_embeddings) if self.training else
                         self.phoneme_prosody_prj(phoneme_prosody_vectors))

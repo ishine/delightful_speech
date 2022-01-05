@@ -227,6 +227,11 @@ if __name__ == "__main__":
         help="speaker ID for multi-speaker synthesis, for single-sentence mode only",
     )
     parser.add_argument(
+        "--post_process",
+        action="store_true",
+        help="post process wav file after denoising"
+    )
+    parser.add_argument(
         "--dataset",
         type=str,
         required=True,
