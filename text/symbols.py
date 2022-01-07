@@ -8,14 +8,14 @@ The default is a set of ASCII characters that works well for English or text tha
 
 import sys
 sys.path.append(".")
-# from text import cmudict
+from text import cmudict
 from text import vietnamese
-# from text import pinyin
+from text import pinyin
 
 _silences = ["sil", "sp", "spn"]
 _vbee = vietnamese.valid_symbols
 
-symbols = _vbee + _silences
+symbols = _vbee + _silences + cmudict.valid_symbols
 print(len(symbols))
 
 

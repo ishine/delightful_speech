@@ -27,13 +27,18 @@ class Dataset(Dataset):
             self.speaker_finetune = None
             self.pretrained_ckpt_path = None
 
+        self.multi_language = model_config["multi_language"] 
+        
         self.pitch_level_tag, self.energy_level_tag, *_ = get_variance_level(preprocess_config, model_config)
 
-        self.basename, self.speaker, self.text, self.raw_text = self.process_meta(
+        self.basename, self.speaker, self.text, self.raw_text, self.language = self.process_meta(
             filename
         )
         with open(os.path.join(self.preprocessed_path, "speakers.json")) as f:
             self.speaker_map = json.load(f)
+            
+        with open(os.path.join(self.preprocessed_path, "languages.json")) as f:
+            self.language_map = json.load(f)
         self.sort = sort
         self.drop_last = drop_last
 
@@ -47,6 +52,8 @@ class Dataset(Dataset):
         basename = self.basename[idx]
         speaker = self.speaker[idx]
         speaker_id = self.speaker_map[speaker]
+        language = self.language[idx]
+        language_id = self.language_map[language]
         raw_text = self.raw_text[idx]
         phone = np.array(text_to_sequence(self.text[idx], self.cleaners))
         mel_path = os.path.join(
@@ -92,6 +99,7 @@ class Dataset(Dataset):
         sample = {
             "id": basename,
             "speaker": speaker_id,
+            "language": language_id,
             "text": phone,
             "raw_text": raw_text,
             "mel": mel,
@@ -104,7 +112,7 @@ class Dataset(Dataset):
 
         return sample
     def delete_item(self,idx):
-        del self.basename[idx], self.speaker[idx], self.text[idx], self.raw_text[idx]
+        del self.basename[idx], self.speaker[idx], self.text[idx], self.raw_text[idx],self.language[idx]
         
     def remove_invalid_sample(self):
         print('start remove invalid example,len data =',len(self))
@@ -125,18 +133,21 @@ class Dataset(Dataset):
             speaker = []
             text = []
             raw_text = []
+            language = []
             for line in f.readlines():
-                n, s, t, r = line.strip("\n").split("|")
+                n, s, t, r, l = line.strip("\n").split("|")
                 if self.speaker_finetune is None or self.speaker_finetune == s:
                     name.append(n)
                     speaker.append(s)
                     text.append(t)
                     raw_text.append(r)
-            return name, speaker, text, raw_text
-
+                    language.append(l)
+            return name, speaker, text, raw_text, language
+           
     def reprocess(self, data, idxs):
         ids = [data[idx]["id"] for idx in idxs]
         speakers = [data[idx]["speaker"] for idx in idxs]
+        languages = [data[idx]["language"] for idx in idxs]
         texts = [data[idx]["text"] for idx in idxs]
         raw_texts = [data[idx]["raw_text"] for idx in idxs]
         mels = [data[idx]["mel"] for idx in idxs]
@@ -151,6 +162,7 @@ class Dataset(Dataset):
         mel_lens = np.array([mel.shape[0] for mel in mels])
 
         speakers = np.array(speakers)
+        languages = np.array(languages)
         texts = pad_1D(texts)
         mels = pad_2D(mels)
         pitches = pad_1D(pitches)
@@ -175,6 +187,7 @@ class Dataset(Dataset):
             durations,
             attn_priors,
             spker_embeds,
+            languages,
         )
 
     def collate_fn(self, data):

@@ -1,19 +1,19 @@
-dataset: "LJSpeech"
+dataset: "MultispeakerVbee"
 
 path:
-  corpus_path: "corpus/LJSpeech-1.1"
-  # lexicon_path: "lexicon/librispeech-lexicon.txt"
-  raw_path: "corpus/LJSpeech-1.1"
-  preprocessed_path: "./preprocessed_data/LJSpeech"
-  wav_dir_path: "corpus/LJSpeech-1.1/LJSpeech"
+  corpus_path: "corpus/MultispeakerVbee"
+  # lexicon_path: "corpus/NgocHuyen/NgocHuyen/data_modeling_word/lexicon.txt"
+  raw_path: "corpus/MultispeakerVbee"
+  # wav_dir_path: "/home3/anhdtd/adaspeech/data/NgocHuyen/NEWS/wav_normalized_22k"
+  preprocessed_path: "./preprocessed_data/MultispeakerVbee"
 
 preprocessing:
   speaker_embedder: "DeepSpeaker" # support 'none', 'DeepSpeaker'
   speaker_embedder_cuda: True # since it's too large to load in a single GPU
   val_size: 512
   text:
-    text_cleaners: ["english_cleaners"]
-    language: "en"
+    text_cleaners: ["basic_cleaners"]
+    language: "vi"
   audio:
     sampling_rate: 22050
     max_wav_value: 32768.0

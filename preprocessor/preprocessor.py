@@ -64,7 +64,10 @@ class Preprocessor:
         if self.multi_speaker and preprocess_config["preprocessing"]["speaker_embedder"] != "none":
             self.speaker_emb = PreDefinedEmbedder(preprocess_config)
             self.speaker_emb_dict = self._init_spker_embeds(self.in_sub_dirs)
-
+            
+        with open(os.path.join(self.in_dir,"language_map.json"), "w") as f:
+            self.speak_language_map = json.load(f)
+            
     def _init_spker_embeds(self, spkers):
         spker_embeds = dict()
         for spker in spkers:
@@ -140,6 +143,8 @@ class Preprocessor:
 
         # Compute pitch, energy, duration, and mel-spectrogram
         speakers = {}
+        languages = {l:i for i,l in enumerate(set(self.speak_language_map.values()))}
+        
         for i, speaker in enumerate(tqdm(self.in_sub_dirs)):
             save_speaker_emb = self.speaker_emb is not None and speaker not in skip_speakers
             if os.path.isdir(os.path.join(self.in_dir, speaker)):
@@ -152,7 +157,7 @@ class Preprocessor:
                     basename = wav_name.split(".")[0]
                     # print("\n", basename)
                     tg_path = os.path.join(
-                        self.out_dir, "TextGrid", "{}.TextGrid".format(basename)
+                        self.out_dir,speaker, "TextGrid", "{}.TextGrid".format(basename)
                     )
                     if not os.path.exists(tg_path):
                         print(tg_path)
@@ -210,6 +215,9 @@ class Preprocessor:
         # Save files
         with open(os.path.join(self.out_dir, "speakers.json"), "w") as f:
             f.write(json.dumps(speakers))
+            
+        with open(os.path.join(self.out_dir, "languages.json"), "w") as f:
+            f.write(json.dumps(languages))
 
         with open(os.path.join(self.out_dir, "stats.json"), "w") as f:
             stats = {
@@ -257,12 +265,16 @@ class Preprocessor:
         return out
 
     def process_utterance(self, tg_path, speaker, basename, save_speaker_emb, wav_dir_path=None):
-        if wav_dir_path:
-            wav_path = os.path.join(wav_dir_path, "{}.wav".format(basename))
-            text_path = os.path.join(self.in_dir, speaker, "data_modeling_word/text", "{}.txt".format(basename))
-        else:
+        try:
             wav_path = os.path.join(self.in_dir, speaker, "{}.wav".format(basename))
             text_path = os.path.join(self.in_dir, speaker, "{}.lab".format(basename))
+        except:
+            if wav_dir_path:
+                wav_path = os.path.join(wav_dir_path, "{}.wav".format(basename))
+                text_path = os.path.join(self.in_dir, speaker, "data_modeling_word/text", "{}.txt".format(basename))
+            else:
+                wav_path = os.path.join(self.in_dir, speaker, "{}.wav".format(basename))
+                text_path = os.path.join(self.in_dir, speaker, "{}.lab".format(basename))
 
         # Get alignments
         textgrid = tgt.io.read_textgrid(tg_path)
@@ -341,7 +353,7 @@ class Preprocessor:
         )
 
         return (
-            "|".join([basename, speaker, text, raw_text]),
+            "|".join([basename, speaker, text, raw_text,"TiengAnh"]),
             self.remove_outlier(pitch_frame),
             self.remove_outlier(pitch_phone),
             self.remove_outlier(energy_frame),

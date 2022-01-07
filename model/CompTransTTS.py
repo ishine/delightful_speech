@@ -58,6 +58,13 @@ class CompTransTTS(nn.Module):
                     model_config["external_speaker_dim"],
                     self.encoder.d_model,
                 )
+        if model_config["multi_language"]:
+            with open(os.path.join(preprocess_config["path"]["preprocessed_path"], "languages.json"),'r') as f:
+                n_language = len(json.load(f))
+                self.language_emb = nn.Embedding(
+                    n_language,
+                    self.encoder.d_model,
+                )
 
     def forward(
         self,
@@ -73,6 +80,7 @@ class CompTransTTS(nn.Module):
         d_targets=None,
         attn_priors=None,
         spker_embeds=None,
+        language=None,
         p_control=1.0,
         e_control=1.0,
         d_control=1.0,
@@ -94,7 +102,11 @@ class CompTransTTS(nn.Module):
             else:
                 assert spker_embeds is not None, "Speaker embedding should not be None"
                 speaker_embeds = self.speaker_emb(spker_embeds) # [B, H]
-
+        
+        language_embeds = None
+        if  self.language_emb is not None:
+            language_embeds = self.language_emb(language)
+        
         (
             output,
             p_targets,
@@ -109,6 +121,7 @@ class CompTransTTS(nn.Module):
             prosody_info,
         ) = self.variance_adaptor(
             speaker_embeds,
+            language_embeds,
             texts,
             text_embeds,
             src_lens,

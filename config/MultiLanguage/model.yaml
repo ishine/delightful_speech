@@ -1,4 +1,5 @@
-block_type: "transformer"
+block_type: "conformer"
+external_speaker_dim: 512
 learn_prosody: True
 
 duration_modeling:
@@ -6,15 +7,16 @@ duration_modeling:
   aligner_temperature: 0.0005
 
 prosody:
-  # Du et al., 2021
+  # Du et al 2021, kha nang cao la ko dung
   learn_mixture: False # This is only supported under supervised duration modeling (learn_alignment: False)
   extractor_kernel_size: 9
   predictor_kernel_size: [9, 5]
   predictor_num_gaussians: 20
   predictor_dropout: 0.2
-
+  
   # Liu et al., 2021
   learn_implicit: True # This is only tested under supervised duration modeling (learn_alignment: False)
+  GST: False # use explicit Global Style Token
   bottleneck_size_u: 256
   bottleneck_size_p: 4
   ref_enc_filters: [32, 32, 64, 64, 128, 128]
@@ -26,6 +28,7 @@ prosody:
   token_num: 32
   predictor_kernel_size: [9, 5] # [9, 5] for non-parallel predictor / 3 for parallel predictor
   predictor_dropout: 0.5
+
 
 transformer:
   encoder_layer: 4
@@ -53,11 +56,6 @@ conformer:
   encoder_dropout: 0.1
   decoder_dropout: 0.1
 
-reformer:
-  depth: 6
-  encoder_head: 8
-  decoder_head: 8
-
 variance_predictor:
   filter_size: 256
   kernel_size: 3
@@ -70,9 +68,12 @@ variance_embedding:
   n_bins: 256
 
 multi_speaker: True
+multi_language: True
 
-max_seq_len: 1000
+max_seq_len: 1150 # max sequence length of VCTK is 1126
 
 vocoder:
   model: "HiFi-GAN" # support 'HiFi-GAN', 'MelGAN'
-  speaker: "LJSpeech" # support  'LJSpeech', 'universal'
+  # speaker: "universal" # support  'LJSpeech', 'universal'
+  speaker: "NgocHuyen"
+  denoiser: True # using HiFi-GAN denoiser

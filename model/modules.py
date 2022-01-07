@@ -901,6 +901,7 @@ class VarianceAdaptor(nn.Module):
     def forward(
         self,
         speaker_embedding,
+        language_embedding,
         text,
         text_embedding,
         src_len,
@@ -921,6 +922,10 @@ class VarianceAdaptor(nn.Module):
         x = text
         if speaker_embedding is not None:
             x = x + speaker_embedding.unsqueeze(1).expand(
+                -1, text.shape[1], -1
+            )
+        if language_embedding is not None:
+            x = x + language_embedding.unsqueeze(1).expand(
                 -1, text.shape[1], -1
             )
 
@@ -945,8 +950,6 @@ class VarianceAdaptor(nn.Module):
                     utterance_prosody_embeddings = self.utterance_prosody_encoder(mel, mel_mask)
                     phoneme_prosody_embeddings, phoneme_prosody_attn = self.phoneme_prosody_encoder(x, src_len, src_mask, mel, mel_len, mel_mask)
 
-                # x = x + self.utterance_prosody_prj(utterance_prosody_embeddings)
-                # x = x + self.phoneme_prosody_prj(phoneme_prosody_embeddings)
                 if self.GST:
                     x = x + self.utterance_prosody_prj(utterance)
                 else:

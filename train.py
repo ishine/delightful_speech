@@ -33,7 +33,7 @@ def train(rank, args, configs, batch_size, num_gpus):
     device = torch.device('cuda:{:d}'.format(rank))
     # Get dataset
     dataset = Dataset(
-        "train.txt", preprocess_config, model_config, train_config, sort=True, drop_last=True
+        "train_multi_language.txt", preprocess_config, model_config, train_config, sort=True, drop_last=True
     )
     error_sample = 0
     for dt in dataset:
@@ -105,8 +105,8 @@ def train(rank, args, configs, batch_size, num_gpus):
             if train == False:
                 break
             for batch in batchs:
+                # print("****batch****",batch)
                 batch = to_device(batch, device)
-
                 with amp.autocast(args.use_amp):
                     # Forward
                     output = model(*(batch[2:]), step=step)
